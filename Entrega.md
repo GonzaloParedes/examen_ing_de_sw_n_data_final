@@ -59,21 +59,21 @@ flowchart LR
 * Python 3.9+ (solo para herramientas de linting local)
 
 ## Cómo ejecutar el proyecto
-1. Levantar Airflow + Postgres
+### 1. Levantar Airflow + Postgres
+En Windows PowerShell, ejecuta:
 
-En Windows PowerShell:
-
+```bash
 docker compose up --build -d
-
+```
 
 Airflow UI estará disponible en:
 
-🔗 http://localhost:8080
+http://localhost:8080
 
 Usuario: airflow
 Contraseña: airflow
 
-▶️ 2. Ejecutar el DAG
+### 2. Ejecutar el DAG
 
 Entrá a la UI de Airflow y activá el DAG:
 
@@ -81,13 +81,15 @@ medallion_pipeline
 
 Luego ejecutá un run manual con la fecha que quieras.
 
-🔍 3. Inspeccionar cada capa (Bronze / Silver / Gold)
+### 3. Inspeccionar cada capa (Bronze / Silver / Gold)
 
 Para esto **entrás en el contenedor Airflow**:
-
+```bash
 docker exec -it examen_ing_de_sw_n_data_final-airflow-webserver-1 bash
-
+```
 🟫 BRONZE – Ver parquet limpio
+```bash
+
 python - << 'EOF'
 import duckdb
 df = duckdb.query("""
@@ -98,28 +100,31 @@ LIMIT 10
 print(df)
 EOF
 
+```
 🥈 SILVER – Ver tablas en DuckDB
-Ver todas las tablas
+```bash
 python - << 'EOF'
 import duckdb
 db = duckdb.connect('/opt/airflow/warehouse/medallion.duckdb')
 print(db.execute("SHOW TABLES").fetchdf())
 EOF
-
+```
 Ver schema de una tabla
+```bash
 python - << 'EOF'
 import duckdb
 db = duckdb.connect('/opt/airflow/warehouse/medallion.duckdb')
 print(db.execute("DESCRIBE fct_customer_transactions").fetchdf())
 EOF
-
+```
 Ver primeras filas
+```bash
 python - << 'EOF'
 import duckdb
 db = duckdb.connect('/opt/airflow/warehouse/medallion.duckdb')
 print(db.execute("SELECT * FROM fct_customer_transactions LIMIT 10").fetchdf())
 EOF
-
+```
 🟡 GOLD – Validación de Data Quality
 
 Los resultados de tests de dbt se almacenan automáticamente en:
@@ -142,10 +147,11 @@ Ejemplo de contenido:
 El proyecto incluye herramientas para analizar y formatear código:
 
 Activar entorno virtual:
-
+```bash
 python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
+```
 
 Black (formato):
 black dags include
@@ -162,9 +168,6 @@ Para detener los contenedores y remover la red:
 docker compose down
 
 ## Mejoras a futuro
-* Incorporar dimensiones como dim_customer y dim_date permite transformar el modelo de datos desde un enfoque transaccional hacia un esquema en estrella optimizado 
-para análisis. Esto mejora la trazabilidad, reduce duplicación de información, y habilita consultas analíticas más complejas con menor costo computacional.
-* Mejorar la observabilidad implica centralizar resultados de calidad, habilitar dashboards de monitoreo y automatizar alertas ante fallos. Esto permite detectar anomalías más rápido,
-  facilita auditorías y aporta confiabilidad al pipeline.
-* Implementar modelos incrementales permite que el pipeline procese únicamente nuevas particiones de datos, evitando recalcular toda la historia y mejorando la eficiencia.
-  Esto es fundamental para escalar a volúmenes grandes de datos.
+* Modelado Star Schema: Migrar la tabla plana actual a un STAR schema, separando dim_customer y dim_time para optimizar consultas OLAP.
+* Alertas y Monitoreo: Configurar notificaciones para algun sistemas (mail) cuando falle un test de dbt (actualmente solo guarda el JSON) y visualizar la calidad de datos en un dashboard.
+* Carga Incremental: Configurar los modelos de dbt como incremental para procesar solo los datos nuevos del día y evitar re-procesar todo el histórico.
