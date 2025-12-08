@@ -11,6 +11,7 @@ Gold: validación de calidad con dbt tests y generación de reportes JSON
 El pipeline corre completamente dentro de Docker usando Airflow como orquestador.
 
 ## Estructura del Proyecto
+```
 ├── dags/
 │   └── medallion_medallion_dag.py
 ├── data/
@@ -28,13 +29,17 @@ El pipeline corre completamente dentro de Docker usando Airflow como orquestador
 ├── warehouse/
 │   └── medallion.duckdb (generado automáticamente)
 └── docker-compose.yml
+```
+
+## Diagrama de arquitectura
+
 ```mermaid
 flowchart LR
-    Raw[("📂 Raw Data")]
-    Bronze[("🟫 Bronze Layer\n(Clean Parquet)")]
-    Silver[("🥈 Silver Layer\n(Transformation)")]
-    Gold[("🟡 Gold Layer\n(Data Quality)")]
-    Airflow{{"⚙️ Airflow\nOrchestrator"}}
+    Raw[("Raw Data")]
+    Bronze[("Bronze Layer\n(Clean Parquet)")]
+    Silver[("🥈Silver Layer\n(Transformation)")]
+    Gold[("Gold Layer\n(Data Quality)")]
+    Airflow{{"Airflow\nOrchestrator"}}
 
     Raw -->|Pandas| Bronze
     Bronze -->|dbt + DuckDB| Silver
