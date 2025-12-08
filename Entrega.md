@@ -133,7 +133,7 @@ data/quality/dq_results_<ds>.json
 
 
 Ejemplo de contenido:
-
+```
 {
   "status": "passed",
   "ds_nodash": "20251205",
@@ -141,7 +141,7 @@ Ejemplo de contenido:
   "stdout": "...",
   "stderr": ""
 }
-
+```
 🧹 4. Linting y formato del código
 
 El proyecto incluye herramientas para analizar y formatear código:
