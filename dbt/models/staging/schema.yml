@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: stg_transactions
+    config:
+      tags: ["silver"]
     description: "Cleaned bronze file, one row per transaction ready for downstream marts."
     columns:
       - name: transaction_id
@@ -36,4 +38,4 @@ models:
         tests:
           - not_null
           - no_futuros:
-              ds: "{{ var('DS_NODASH', '20000101')[0:4] }}-{{ var('DS_NODASH', '20000101')[4:6] }}-{{ var('DS_NODASH', '20000101')[6:8] }}"
+              ds: "{{ var('ds_nodash', '20000101')[0:4] }}-{{ var('ds_nodash', '20000101')[4:6] }}-{{ var('ds_nodash', '20000101')[6:8] }}"

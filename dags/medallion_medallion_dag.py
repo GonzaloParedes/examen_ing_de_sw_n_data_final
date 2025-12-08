@@ -88,12 +88,13 @@ def _run_dbt_command(command: str, ds_nodash: str, quality: bool = False) -> Non
 # --- WRAPPERS PARA LOS TASKS ---
 
 
-def run_bronze(execution_date, **kwargs):
+def run_bronze(**kwargs):
     """
     Wrapper para la limpieza.
     Airflow pasa 'execution_date' (pendulum datetime) en **kwargs.
     Tu helper espera 'execution_date' como objeto fecha.
     """
+    execution_date = kwargs["execution_date"]
     clean_daily_transactions(
         execution_date=execution_date,  # Pasamos el objeto fecha directo
         raw_dir=RAW_DIR,  # Pasamos el Path definido arriba
@@ -101,14 +102,17 @@ def run_bronze(execution_date, **kwargs):
     )
 
 
-def run_silver(ds_nodash, **kwargs):
+def run_silver(**kwargs):
     """Ejecuta modelos silver."""
+    ds_nodash = kwargs['ds_nodash']
+
     _run_dbt_command("run --select tag:silver", ds_nodash)
 
 
-def run_gold(ds_nodash, **kwargs):
-    """Ejecuta modelos gold."""
-    _run_dbt_command("test --select tag:gold", ds_nodash)
+def run_gold(**kwargs):
+    """Ejecuta modelos gold y genera reporte de data quality."""
+    ds_nodash = kwargs['ds_nodash']
+    _run_dbt_command("test --select tag:gold", ds_nodash, quality=True)
 
 
 def build_dag() -> DAG:

@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: fct_customer_transactions
+    config:
+      tags: ["gold"]
     description: "Aggregated customer level metrics derived from cleaned transactions."
     columns:
       - name: customer_id
