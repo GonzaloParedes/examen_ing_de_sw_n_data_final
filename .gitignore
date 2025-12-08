@@ -1,0 +1,65 @@
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# -----------------------------
+# Airflow
+# -----------------------------
+airflow_home/
+logs/
+airflow-webserver.pid
+airflow.cfg
+webserver_config.py
+
+# Archivos generados durante runtime
+*.pid
+
+# -----------------------------
+# dbt & DuckDB
+# -----------------------------
+dbt/target/
+warehouse/*.duckdb
+
+# -----------------------------
+# Datos del proyecto
+# -----------------------------
+data/clean/
+data/quality/
+data/*.parquet
+data/**/*.parquet
+
+# Opción: si querés NO subir los CSV crudos,
+# descomentar esto:
+# data/raw/
+
+# -----------------------------
+# Docker
+# -----------------------------
+# Ignorar .env (credenciales/variables locales)
+.env
+
+# Archivos creados por Docker Desktop
+**/.docker/
+**/.dockerignore
+
+# -----------------------------
+# Editor / IDE configs
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+
+profiles/.user.yml
+profiles/user.yml
+profiles/*.user.yml

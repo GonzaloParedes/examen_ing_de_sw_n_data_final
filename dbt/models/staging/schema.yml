@@ -35,3 +35,5 @@ models:
         description: "Date component derived from transaction_ts for partitioning/grouping."
         tests:
           - not_null
+          - no_futuros:
+              ds: "{{ var('DS_NODASH', '20000101')[0:4] }}-{{ var('DS_NODASH', '20000101')[4:6] }}-{{ var('DS_NODASH', '20000101')[6:8] }}"

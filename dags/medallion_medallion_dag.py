@@ -14,17 +14,15 @@ from airflow import DAG
 from airflow.exceptions import AirflowException
 from airflow.operators.python import PythonOperator
 
-# pylint: disable=import-error,wrong-import-position
-
-
+# Agregar el directorio base al path para poder importar módulos locales
 BASE_DIR = Path(__file__).resolve().parents[1]
 if str(BASE_DIR) not in sys.path:
     sys.path.append(str(BASE_DIR))
 
-from include.transformations import (
-    clean_daily_transactions,
-)  # pylint: disable=wrong-import-position
 
+from include.transformations import clean_daily_transactions
+
+# Definición de rutas (Paths)
 RAW_DIR = BASE_DIR / "data/raw"
 CLEAN_DIR = BASE_DIR / "data/clean"
 QUALITY_DIR = BASE_DIR / "data/quality"
@@ -47,16 +45,12 @@ def _build_env(ds_nodash: str) -> dict[str, str]:
     return env
 
 
-def _run_dbt_command(command: str, ds_nodash: str) -> subprocess.CompletedProcess:
-    """Execute a dbt command and return the completed process."""
+def _run_dbt_command(command: str, ds_nodash: str, quality: bool = False) -> None:
+    """Ejecuta dbt. Si quality=True, guarda el reporte de data quality."""
     env = _build_env(ds_nodash)
-    return subprocess.run(
-        [
-            "dbt",
-            command,
-            "--project-dir",
-            str(DBT_DIR),
-        ],
+
+    result = subprocess.run(
+        ["dbt"] + command.split() + ["--project-dir", str(DBT_DIR)],
         cwd=DBT_DIR,
         env=env,
         capture_output=True,
@@ -64,16 +58,63 @@ def _run_dbt_command(command: str, ds_nodash: str) -> subprocess.CompletedProces
         check=False,
     )
 
+    print("STDOUT:", result.stdout)
+    if result.stderr:
+        print("STDERR:", result.stderr)
 
-# TODO: Definir las funciones necesarias para cada etapa del pipeline
-#  (bronze, silver, gold) usando las funciones de transformación y
-#  los comandos de dbt.
+    # SOLO GOLD genera archivo de DQ
+    if quality:
+        QUALITY_DIR.mkdir(parents=True, exist_ok=True)
+
+        status = "passed" if result.returncode == 0 else "failed"
+
+        dq_report = {
+            "ds_nodash": ds_nodash,
+            "status": status,
+            "command": command,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+        }
+
+        report_path = QUALITY_DIR / f"dq_results_{ds_nodash}.json"
+
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(dq_report, f, indent=2)
+
+    if result.returncode != 0:
+        raise AirflowException(f"dbt command failed: {result.stderr}")
+
+
+# --- WRAPPERS PARA LOS TASKS ---
+
+
+def run_bronze(execution_date, **kwargs):
+    """
+    Wrapper para la limpieza.
+    Airflow pasa 'execution_date' (pendulum datetime) en **kwargs.
+    Tu helper espera 'execution_date' como objeto fecha.
+    """
+    clean_daily_transactions(
+        execution_date=execution_date,  # Pasamos el objeto fecha directo
+        raw_dir=RAW_DIR,  # Pasamos el Path definido arriba
+        clean_dir=CLEAN_DIR,  # Pasamos el Path definido arriba
+    )
+
+
+def run_silver(ds_nodash, **kwargs):
+    """Ejecuta modelos silver."""
+    _run_dbt_command("run --select tag:silver", ds_nodash)
+
+
+def run_gold(ds_nodash, **kwargs):
+    """Ejecuta modelos gold."""
+    _run_dbt_command("test --select tag:gold", ds_nodash)
 
 
 def build_dag() -> DAG:
-    """Construct the medallion pipeline DAG with bronze/silver/gold tasks."""
+    """Construct the medallion pipeline DAG."""
     with DAG(
-        description="Bronze/Silver/Gold medallion demo with pandas, dbt, and DuckDB",
+        description="Bronze/Silver/Gold medallion demo",
         dag_id="medallion_pipeline",
         schedule="0 6 * * *",
         start_date=pendulum.datetime(2025, 12, 1, tz="UTC"),
@@ -81,20 +122,30 @@ def build_dag() -> DAG:
         max_active_runs=1,
     ) as medallion_dag:
 
+        # 1. BRONZE: Limpieza con Pandas (Usando tu helper)
+        bronze_task = PythonOperator(
+            task_id="bronze_layer",
+            python_callable=run_bronze,
+            # No necesitamos op_kwargs para ds_nodash aqui,
+            # porque run_bronze usa 'execution_date' del contexto automático
+        )
 
-        # TODO:
-        # * Agregar las tasks necesarias del pipeline para completar lo pedido por el enunciado.
-        # * Usar PythonOperator con el argumento op_kwargs para pasar ds_nodash a las funciones.
-        #   De modo que cada task pueda trabajar con la fecha de ejecución correspondiente.
-        # Recomendaciones:
-        #  * Pasar el argumento ds_nodash a las funciones definidas arriba.
-        #    ds_nodash contiene la fecha de ejecución en formato YYYYMMDD sin guiones.
-        #    Utilizarlo para que cada task procese los datos del dia correcto y los archivos
-        #    de salida tengan nombres únicos por fecha.
-        #  * Asegurarse de que los paths usados en las funciones sean relativos a BASE_DIR.
-        #  * Usar las funciones definidas arriba para cada etapa del pipeline.
+        # 2. SILVER: dbt run (Tag Silver)
+        silver_task = PythonOperator(
+            task_id="silver_layer",
+            python_callable=run_silver,
+            op_kwargs={"ds_nodash": "{{ ds_nodash }}"},
+        )
 
+        # 3. GOLD: dbt run (Tag Gold)
+        gold_task = PythonOperator(
+            task_id="gold_layer",
+            python_callable=run_gold,
+            op_kwargs={"ds_nodash": "{{ ds_nodash }}"},
+        )
 
+        # Dependencias
+        bronze_task >> silver_task >> gold_task
 
     return medallion_dag
 
