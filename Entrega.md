@@ -37,7 +37,7 @@ El pipeline corre completamente dentro de Docker usando Airflow como orquestador
 flowchart LR
     Raw[("Raw Data")]
     Bronze[("Bronze Layer\n(Clean Parquet)")]
-    Silver[("🥈Silver Layer\n(Transformation)")]
+    Silver[("Silver Layer\n(Transformation)")]
     Gold[("Gold Layer\n(Data Quality)")]
     Airflow{{"Airflow\nOrchestrator"}}
 
@@ -102,7 +102,7 @@ Para esto **entrás en el contenedor Airflow**:
 ```bash
 docker exec -it examen_ing_de_sw_n_data_final-airflow-webserver-1 bash
 ```
-🟫 BRONZE – Ver parquet limpio
+BRONZE – Ver parquet limpio
 ```bash
 
 python - << 'EOF'
@@ -116,7 +116,7 @@ print(df)
 EOF
 
 ```
-🥈 SILVER – Ver tablas en DuckDB
+SILVER – Ver tablas en DuckDB
 ```bash
 python - << 'EOF'
 import duckdb
@@ -140,7 +140,7 @@ db = duckdb.connect('/opt/airflow/warehouse/medallion.duckdb')
 print(db.execute("SELECT * FROM fct_customer_transactions LIMIT 10").fetchdf())
 EOF
 ```
-🟡 GOLD – Validación de Data Quality
+GOLD – Validación de Data Quality
 
 Los resultados de tests de dbt se almacenan automáticamente en:
 
@@ -157,7 +157,7 @@ Ejemplo de contenido:
   "stderr": ""
 }
 ```
-🧹 4. Linting y formato del código
+4. Linting y formato del código
 
 El proyecto incluye herramientas para analizar y formatear código:
 
@@ -183,6 +183,6 @@ Para detener los contenedores y remover la red:
 docker compose down
 
 ## Mejoras a futuro
-* Modelado Star Schema: Migrar la tabla plana actual a un STAR schema, separando dim_customer y dim_time para optimizar consultas OLAP.
-* Alertas y Monitoreo: Configurar notificaciones para algun sistemas (mail) cuando falle un test de dbt (actualmente solo guarda el JSON) y visualizar la calidad de datos en un dashboard.
+* Modelado Star Schema: Migrar hacia un STAR schema, separando dim_customer y dim_time para optimizar consultas OLAP.
+* Alertas y Monitoreo: Configurar notificaciones para que cuando falle un test de dbt (actualmente solo guarda el JSON) se lo pueda identificar rapido e implementar un dashboard para visualizar los datos.
 * Carga Incremental: Configurar los modelos de dbt como incremental para procesar solo los datos nuevos del día y evitar re-procesar todo el histórico.
