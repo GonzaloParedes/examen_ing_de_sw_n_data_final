@@ -112,6 +112,7 @@ def run_silver(**kwargs):
 def run_gold(**kwargs):
     """Ejecuta modelos gold y genera reporte de data quality."""
     ds_nodash = kwargs['ds_nodash']
+    _run_dbt_command("run --select tag:gold", ds_nodash)
     _run_dbt_command("test --select tag:gold", ds_nodash, quality=True)
 
 
